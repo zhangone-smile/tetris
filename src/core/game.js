@@ -29,46 +29,55 @@ export const player = ref({
 });
 
 export function startGame(mode = 'classic') {
-  currentMode.value = mode;
-  console.log('当前模式:', currentMode.value);
-  // 根据模式设置不同的配置
-  if (mode === 'superblind') {
-    superBlindConfig.value = {
-      showPieceTime: 500,
-      showLockTime: 500
-    };
-  } else if (mode === 'blind') {
-    superBlindConfig.value = {
-      showPieceTime: 1000,
-      showLockTime: 1000
-    };
-  }
   board.value = createEmptyBoard();
   score.value = 0;
   lines.value = 0;
-  level.value = 0;
+  level.value = 1;
   isGameOver.value = false;
-  nextPiece.value = randomTetromino();
+  currentMode.value = mode;
   resetPlayer();
 }
 
 export function resetPlayer() {
-  player.value.tetromino = JSON.parse(JSON.stringify(nextPiece.value));
+  if (currentMode.value === 'invert') {
+    player.value = {
+      tetromino: nextPiece.value,
+      pos: { x: 3, y: BOARD_HEIGHT - getTetrominoHeight(nextPiece.value.shape) }
+    };
+    nextPiece.value = randomTetromino();
+    // 检查新方块是否与已有方块重叠（底部生成，向上移动）
+    const overlap = checkCollision(player.value, board.value, { x: 0, y: 0 });
+    if (overlap) {
+      board.value = createEmptyBoard();
+      isGameOver.value = true;
+      return;
+    }
+    return;
+  }
+  // 极速快打模式与经典模式一致，直接顶部生成
+  player.value = {
+    tetromino: nextPiece.value,
+    pos: { x: 3, y: 0 }
+  };
   nextPiece.value = randomTetromino();
-  player.value.pos.y = 0;
-  player.value.pos.x =
-    Math.floor(BOARD_WIDTH / 2) - Math.floor((player.value.tetromino.shape[0]?.length || 0) / 2);
-  player.value.collided = false;
-  console.log('resetPlayer', player.value.tetromino, 'pos.x:', player.value.pos.x, 'pos.y:', player.value.pos.y);
-
-  // 只在真正重叠时game over
+  // 检查新方块是否与已有方块重叠
   const overlap = checkCollision(player.value, board.value, { x: 0, y: 0 });
-  console.log('resetPlayer overlap:', overlap);
   if (overlap) {
-    console.log('GAME OVER (resetPlayer overlap)');
     board.value = createEmptyBoard();
     isGameOver.value = true;
+    return;
   }
+}
+
+function getTetrominoHeight(shape) {
+  // 计算方块实际高度
+  let maxY = 0;
+  shape.forEach((row, y) => {
+    if (row.some(cell => cell !== 0)) {
+      maxY = y;
+    }
+  });
+  return maxY + 1;
 }
 
 export function checkCollision(player, board, { x: moveX, y: moveY }) {
@@ -101,16 +110,43 @@ export function movePlayer(dir) {
 }
 
 export function dropPlayer() {
-  console.log('dropPlayer called, isGameOver:', isGameOver.value, 'pos.y:', player.value.pos.y);
   if (isGameOver.value) return;
+  if (currentMode.value === 'invert') {
+    const collision = checkCollision(player.value, board.value, { x: 0, y: -1 });
+    if (!collision) {
+      player.value = {
+        ...player.value,
+        pos: { ...player.value.pos, y: player.value.pos.y - 1 }
+      };
+    } else {
+      // 检查锁定后是否有一格在 y >= BOARD_HEIGHT
+      const { tetromino, pos } = player.value;
+      let gameOver = false;
+      tetromino.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            const boardY = y + pos.y;
+            if (boardY >= BOARD_HEIGHT) gameOver = true;
+          }
+        });
+      });
+      if (gameOver) {
+        board.value = createEmptyBoard();
+        isGameOver.value = true;
+        return;
+      }
+      updateBoard();
+      sweepRows();
+      resetPlayer();
+    }
+    return;
+  }
   const collision = checkCollision(player.value, board.value, { x: 0, y: 1 });
-  console.log('collision:', collision);
   if (!collision) {
     player.value = {
       ...player.value,
       pos: { ...player.value.pos, y: player.value.pos.y + 1 }
     };
-    console.log('moved down, new y:', player.value.pos.y);
   } else {
     // 检查锁定后是否有一格在 y < 0
     const { tetromino, pos } = player.value;
@@ -124,7 +160,6 @@ export function dropPlayer() {
       });
     });
     if (gameOver) {
-      console.log('GAME OVER (dropPlayer lock)');
       board.value = createEmptyBoard();
       isGameOver.value = true;
       return;
@@ -148,6 +183,23 @@ export function hardDropPlayer() {
   updateBoard();
   sweepRows();
   resetPlayer();
+}
+
+export function hardUpPlayer() {
+  if (isGameOver.value) return;
+  if (currentMode.value === 'invert') {
+    while (!checkCollision(player.value, board.value, { x: 0, y: -1 })) {
+      player.value = {
+        ...player.value,
+        pos: { ...player.value.pos, y: player.value.pos.y - 1 }
+      };
+    }
+    updateBoard();
+    sweepRows();
+    resetPlayer();
+    return;
+  }
+  // ...原有hardDropPlayer逻辑...
 }
 
 function updateBoard() {
@@ -225,4 +277,39 @@ export function rotatePlayer() {
       return;
     }
   }
+}
+
+export function upPlayer() {
+  if (isGameOver.value) return;
+  if (currentMode.value === 'invert') {
+    const collision = checkCollision(player.value, board.value, { x: 0, y: -1 });
+    if (!collision) {
+      player.value = {
+        ...player.value,
+        pos: { ...player.value.pos, y: player.value.pos.y - 1 }
+      };
+    } else {
+      // 检查锁定后是否有一格在 y >= BOARD_HEIGHT
+      const { tetromino, pos } = player.value;
+      let gameOver = false;
+      tetromino.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            const boardY = y + pos.y;
+            if (boardY >= BOARD_HEIGHT) gameOver = true;
+          }
+        });
+      });
+      if (gameOver) {
+        board.value = createEmptyBoard();
+        isGameOver.value = true;
+        return;
+      }
+      updateBoard();
+      sweepRows();
+      resetPlayer();
+    }
+    return;
+  }
+  // ...原有dropPlayer逻辑...
 } 

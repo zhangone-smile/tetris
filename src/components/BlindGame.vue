@@ -18,6 +18,7 @@
       :lines="['船只停在船坞中会非常安全，但那并不是造船的意义']"
       bless="张芝毓，我喜欢你挑战自我的样子"
     />
+    <div v-if="showFeedbackTip" class="feedback-tip">反馈至yzhangsp@gmail.com</div>
   </div>
 </template>
 
@@ -34,6 +35,13 @@ import {
   shakeType, dissolveRows 
 } from '../core/game';
 
+const props = defineProps({
+  showFeedbackTip: {
+    type: Boolean,
+    default: false
+  }
+});
+
 let dropInterval;
 let hardDropLock = false;
 let justHardDropped = false;
@@ -43,6 +51,7 @@ const router = useRouter();
 const hideActivePiece = ref(false);
 const isPaused = ref(false);
 let showTimer = null;
+let downInterval = null;
 
 const handleStartGame = () => {
   startGame('blind');
@@ -79,15 +88,28 @@ const handleKeyPress = (event) => {
   }
   if (event.repeat) return;
   if (event.key === 'ArrowLeft') {
-    shakeType.value = 'shake-left';
-    setTimeout(() => { shakeType.value = ''; }, 180);
-    movePlayer(-1);
+    if (isAtLeftEdge()) {
+      showActivePieceForEdge();
+    } else {
+      shakeType.value = 'shake-left';
+      setTimeout(() => { shakeType.value = ''; }, 180);
+      movePlayer(-1);
+    }
   } else if (event.key === 'ArrowRight') {
-    shakeType.value = 'shake-right';
-    setTimeout(() => { shakeType.value = ''; }, 180);
-    movePlayer(1);
+    if (isAtRightEdge()) {
+      showActivePieceForEdge();
+    } else {
+      shakeType.value = 'shake-right';
+      setTimeout(() => { shakeType.value = ''; }, 180);
+      movePlayer(1);
+    }
   } else if (event.key === 'ArrowDown') {
     dropPlayer();
+    if (!downInterval) {
+      downInterval = setInterval(() => {
+        dropPlayer();
+      }, 60);
+    }
   } else if (event.key === 'ArrowUp') {
     rotatePlayer();
   }
@@ -97,6 +119,12 @@ const handleKeyUp = (event) => {
   if (event.code === 'KeyM') {
     hardDropLock = false;
   }
+  if (event.key === 'ArrowDown') {
+    if (downInterval) {
+      clearInterval(downInterval);
+      downInterval = null;
+    }
+  }
 };
 
 function showActivePieceForAWhile() {
@@ -105,6 +133,36 @@ function showActivePieceForAWhile() {
   showTimer = setTimeout(() => {
     hideActivePiece.value = true;
   }, 1000);
+}
+
+function isAtLeftEdge() {
+  const { tetromino, pos } = player.value;
+  for (let y = 0; y < tetromino.shape.length; y++) {
+    for (let x = 0; x < tetromino.shape[y].length; x++) {
+      if (tetromino.shape[y][x] !== 0) {
+        if (pos.x + x === 0) return true;
+      }
+    }
+  }
+  return false;
+}
+function isAtRightEdge() {
+  const { tetromino, pos } = player.value;
+  for (let y = 0; y < tetromino.shape.length; y++) {
+    for (let x = tetromino.shape[y].length - 1; x >= 0; x--) {
+      if (tetromino.shape[y][x] !== 0) {
+        if (pos.x + x === 9) return true;
+      }
+    }
+  }
+  return false;
+}
+function showActivePieceForEdge() {
+  hideActivePiece.value = false;
+  if (showTimer) clearTimeout(showTimer);
+  showTimer = setTimeout(() => {
+    hideActivePiece.value = true;
+  }, 500);
 }
 
 watch(player, (newVal, oldVal) => {
@@ -151,6 +209,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyPress);
   window.removeEventListener('keyup', handleKeyUp);
   clearInterval(dropInterval);
+  if (downInterval) clearInterval(downInterval);
   if (showTimer) clearTimeout(showTimer);
 });
 
@@ -295,5 +354,15 @@ aside {
   background: #ffd600;
   color: #223366;
   border-color: #ffd600;
+}
+.feedback-tip {
+  position: fixed;
+  right: 18px;
+  bottom: 12px;
+  color: #FFD600;
+  font-size: 0.98em;
+  font-family: FangSong, Noto Serif SC, SimSun, serif;
+  z-index: 10000;
+  pointer-events: none;
 }
 </style> 

@@ -3,6 +3,7 @@
     <button class="mode-btn" @click="selectMode('classic')">经典模式</button>
     <button class="mode-btn" @click="selectMode('blind')">盲打进阶</button>
     <button class="mode-btn" @click="selectMode('superblind')">超级盲打</button>
+    <button class="mode-btn" @click="selectMode('invert')">颠倒乾坤</button>
   </div>
 </template>
 
@@ -16,6 +17,8 @@ function selectMode(mode) {
     router.push('/blind');
   } else if (mode === 'superblind') {
     router.push('/superblind');
+  } else if (mode === 'invert') {
+    router.push('/invert');
   }
 }
 </script>

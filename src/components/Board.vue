@@ -11,14 +11,6 @@
         ></div>
       </div>
     </div>
-    <div v-for="y in dissolveRows" :key="'particles-'+y" class="dissolve-particles-container">
-      <span 
-        class="particle" 
-        v-for="n in 100" 
-        :key="n" 
-        :style="getExplodeParticleStyle(n, y)"
-      ></span>
-    </div>
   </div>
 </template>
 
@@ -80,44 +72,6 @@ function getRowMainColor(y) {
   }
   return '#fff';
 }
-
-// 生成溢出棋盘的炸裂粒子样式
-function getExplodeParticleStyle(n, y) {
-  // 棋盘宽高
-  const boardW = props.board[0]?.length || 10;
-  const boardH = props.board.length || 20;
-  // 粒子起点：棋盘中心x，y为当前行
-  const originX = boardW * 30 / 2;
-  const originY = (y + 0.5) * 32; // 30+2px边距
-  // 角度随机分布
-  const angle = Math.random() * 360;
-  // 距离：棋盘宽度1.5~2倍
-  const dist = 120 + Math.random() * 180; // 120~300px
-  // 终点坐标
-  const tx = Math.cos(angle * Math.PI / 180) * dist;
-  const ty = Math.sin(angle * Math.PI / 180) * dist;
-  // 其他属性
-  const size = 5 + Math.random() * 10;
-  const opacity = 0.7 + Math.random() * 0.3;
-  const duration = 0.7 + Math.random() * 0.4;
-  const color = '#fff'; // 统一为白色
-  return {
-    position: 'absolute',
-    left: `${originX}px`,
-    top: `${originY}px`,
-    width: `${size}px`,
-    height: `${size}px`,
-    background: color,
-    borderRadius: '50%',
-    opacity,
-    zIndex: 20,
-    pointerEvents: 'none',
-    filter: 'brightness(1.1) drop-shadow(0 0 6px #fff8)',
-    animation: `explode-particle ${duration}s cubic-bezier(.2,1.2,.6,1) forwards`,
-    '--tx': `${tx}px`,
-    '--ty': `${ty}px`,
-  };
-}
 </script>
 
 <style scoped>
@@ -148,11 +102,6 @@ function getExplodeParticleStyle(n, y) {
   30% { transform: translate(6px, 0); }
   60% { transform: translate(-4px, 0); }
   100% { transform: translate(0, 0); }
-}
-@keyframes explode-particle {
-  0% { opacity: 1; transform: scale(1) translate(0,0); }
-  80% { opacity: 1; }
-  100% { opacity: 0; transform: scale(0.5) translate(var(--tx), var(--ty)); }
 }
 .board-bg {
   background: #101c3a;
@@ -198,6 +147,7 @@ function getExplodeParticleStyle(n, y) {
 }
 .row {
   display: flex;
+  /* position: relative; */
 }
 .cell {
   width: 30px;
@@ -209,18 +159,5 @@ function getExplodeParticleStyle(n, y) {
 }
 .cell-dissolve {
   z-index: 2;
-}
-.dissolve-particles-container {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 20;
-  overflow: visible;
-}
-.particle {
-  will-change: transform, opacity;
 }
 </style> 

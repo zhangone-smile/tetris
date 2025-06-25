@@ -18,11 +18,11 @@
       :lines="['我们渴望挑战高山，迎接更难的挑战，但是有的时候，简单的过程，更是幸福的映射']"
       bless="张芝毓，我希望你永远简单，美好，幸福"
     />
+    <div v-if="showFeedbackTip" class="feedback-tip">反馈至yzhangsp@gmail.com</div>
   </div>
 </template>
 
 <script setup>
-console.log('SuperBlindGame.vue 文件已加载'); // 调试输出
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Board from './Board.vue';
@@ -40,6 +40,7 @@ import { sweepRows } from '../core/game';
 let dropInterval = null;
 let showTimer = null;
 let lockShowTimer = null;
+let downInterval = null;
 const showGameOver = ref(false);
 const router = useRouter();
 const hideActivePiece = ref(false);
@@ -47,6 +48,13 @@ const isPaused = ref(false);
 let hardDropLock = false;
 const lockedMask = ref([]); // 当前刚锁定的格子
 const disappearSet = ref(new Set()); // 永久消失的格子，存储为 'x,y' 字符串
+
+const props = defineProps({
+  showFeedbackTip: {
+    type: Boolean,
+    default: false
+  }
+});
 
 function clearAllTimers() {
   if (dropInterval) clearInterval(dropInterval);
@@ -97,15 +105,28 @@ function handleKeyPress(event) {
   }
   if (event.repeat) return;
   if (event.key === 'ArrowLeft') {
-    shakeType.value = 'shake-left';
-    setTimeout(() => { shakeType.value = ''; }, 180);
-    movePlayer(-1);
+    if (isAtLeftEdge()) {
+      showActivePieceForEdge();
+    } else {
+      shakeType.value = 'shake-left';
+      setTimeout(() => { shakeType.value = ''; }, 180);
+      movePlayer(-1);
+    }
   } else if (event.key === 'ArrowRight') {
-    shakeType.value = 'shake-right';
-    setTimeout(() => { shakeType.value = ''; }, 180);
-    movePlayer(1);
+    if (isAtRightEdge()) {
+      showActivePieceForEdge();
+    } else {
+      shakeType.value = 'shake-right';
+      setTimeout(() => { shakeType.value = ''; }, 180);
+      movePlayer(1);
+    }
   } else if (event.key === 'ArrowDown') {
     dropPlayerWithLockShow();
+    if (!downInterval) {
+      downInterval = setInterval(() => {
+        dropPlayerWithLockShow();
+      }, 60);
+    }
   } else if (event.key === 'ArrowUp') {
     rotatePlayer();
   }
@@ -114,6 +135,12 @@ function handleKeyPress(event) {
 function handleKeyUp(event) {
   if (event.code === 'KeyM') {
     hardDropLock = false;
+  }
+  if (event.key === 'ArrowDown') {
+    if (downInterval) {
+      clearInterval(downInterval);
+      downInterval = null;
+    }
   }
 }
 
@@ -131,6 +158,36 @@ function showActivePieceOnLock() {
   lockShowTimer = setTimeout(() => {
     if (!isPaused.value) hideActivePiece.value = true;
   }, superBlindConfig.value.showLockTime);
+}
+
+function isAtLeftEdge() {
+  const { tetromino, pos } = player.value;
+  for (let y = 0; y < tetromino.shape.length; y++) {
+    for (let x = 0; x < tetromino.shape[y].length; x++) {
+      if (tetromino.shape[y][x] !== 0) {
+        if (pos.x + x === 0) return true;
+      }
+    }
+  }
+  return false;
+}
+function isAtRightEdge() {
+  const { tetromino, pos } = player.value;
+  for (let y = 0; y < tetromino.shape.length; y++) {
+    for (let x = tetromino.shape[y].length - 1; x >= 0; x--) {
+      if (tetromino.shape[y][x] !== 0) {
+        if (pos.x + x === 9) return true;
+      }
+    }
+  }
+  return false;
+}
+function showActivePieceForEdge() {
+  hideActivePiece.value = false;
+  if (showTimer) clearTimeout(showTimer);
+  showTimer = setTimeout(() => {
+    if (!isPaused.value) hideActivePiece.value = true;
+  }, 500);
 }
 
 watch(player, (newVal, oldVal) => {
@@ -203,6 +260,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyPress);
   window.removeEventListener('keyup', handleKeyUp);
   clearAllTimers();
+  if (downInterval) clearInterval(downInterval);
 });
 </script>
 
@@ -324,5 +382,15 @@ aside {
   background: #ffd600;
   color: #223366;
   border-color: #ffd600;
+}
+.feedback-tip {
+  position: fixed;
+  right: 18px;
+  bottom: 12px;
+  color: #FFD600;
+  font-size: 0.98em;
+  font-family: FangSong, Noto Serif SC, SimSun, serif;
+  z-index: 10000;
+  pointer-events: none;
 }
 </style> 

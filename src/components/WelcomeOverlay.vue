@@ -17,6 +17,11 @@
         送给最最最好的张芝毓
       </div>
     </transition>
+    <transition name="fade">
+      <div v-if="stage === 'wrong' || stage === 'wrongfade'" class="big-welcome" :style="{ fontFamily }">
+        这是一个设计给我女朋友的Tetris网页，感谢你的使用，有任何修改意见欢迎反馈至 yzhangsp@gmail.com
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -30,18 +35,26 @@ const day = ref('');
 const error = ref(false);
 const stage = ref('question');
 function checkAnswer() {
-  if (year.value === '2025' && month.value === '6' && day.value === '15') {
+  if (year.value === '2025' && month.value === '5' && day.value === '15') {
     error.value = false;
     stage.value = 'welcome';
     setTimeout(() => {
       stage.value = 'fadeout';
       setTimeout(() => {
         stage.value = 'hidden';
-        emit('finish');
+        emit('finish', false);
       }, 800);
     }, 2000);
   } else {
-    error.value = true;
+    error.value = false;
+    stage.value = 'wrong';
+    setTimeout(() => {
+      stage.value = 'wrongfade';
+      setTimeout(() => {
+        stage.value = 'hidden';
+        emit('finish', true);
+      }, 800);
+    }, 2000);
   }
 }
 </script>

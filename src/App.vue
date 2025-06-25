@@ -1,16 +1,20 @@
 <!-- Tetris App -->
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import WelcomeOverlay from './components/WelcomeOverlay.vue';
+
+const route = useRoute();
+const showWelcome = ref(true);
+const showFeedbackTip = ref(false);
 
 let animationId;
 let resizeHandler;
 
-const showWelcome = ref(true);
 const router = useRouter();
-function handleWelcomeFinish() {
+function handleWelcomeFinish(isWrong) {
   showWelcome.value = false;
+  showFeedbackTip.value = !!isWrong;
   setTimeout(() => {
     router.push('/mode');
   }, 400);
@@ -76,11 +80,14 @@ onUnmounted(() => {
   <div class="app-bg">
     <canvas id="star-bg" class="star-bg"></canvas>
     <WelcomeOverlay v-if="showWelcome" @finish="handleWelcomeFinish" />
-    <transition name="fade">
-      <div v-if="!showWelcome" key="main-content">
-        <transition name="fade" appear><router-view style="transition-delay:0.2s"/></transition>
-      </div>
-    </transition>
+    <div v-if="!showWelcome" key="main-content">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" appear>
+          <component :is="Component" :showFeedbackTip="showFeedbackTip" style="transition-delay:0.2s"/>
+        </transition>
+      </router-view>
+    </div>
+    <div v-if="showFeedbackTip" class="feedback-tip-global">反馈至yzhangsp@gmail.com</div>
   </div>
 </template>
 
@@ -116,5 +123,16 @@ onUnmounted(() => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+.feedback-tip-global {
+  position: fixed;
+  right: 18px;
+  bottom: 12px;
+  color: #FFD600;
+  font-size: 0.98em;
+  font-family: FangSong, Noto Serif SC, SimSun, serif;
+  z-index: 10000;
+  pointer-events: none;
+  text-shadow: 0 2px 8px #000a;
 }
 </style>
